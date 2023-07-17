@@ -7,52 +7,61 @@
 
 import Foundation
 
-class ApiManager{
+enum RequestType {
+    case get
+    case post(id: Int, name: String, price: Int, brand: String, category: String)
+}
+
+enum DataType {
+    case model(ProductsModel)
+    case statusCode(Int)
+}
+
+class ApiManager {
     
     static let shared = ApiManager()
     
-    func requestData(completition: @escaping (Result<ProductsModel,Error>) -> Void) {
-        
-        guard let url = URL(string: "https://dummyjson.com/products") else {return}
-        
-        let request = URLRequest(url: url)
-        
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+    func universalRequest(type: RequestType, completition: @escaping (Result<DataType,Error>) -> Void) {
+        switch type {
+        case .get:
+            guard let url = URL(string: "https://dummyjson.com/products") else {return}
             
-            guard let data = data else {return}
+            let request = URLRequest(url: url)
             
-            do {
-                let value = try JSONDecoder().decode(ProductsModel.self, from: data)
-                completition(.success(value))
-            } catch {
-                completition(.failure(error))
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                
+                guard let data = data else {return}
+                
+                do {
+                    let model = try JSONDecoder().decode(ProductsModel.self, from: data)
+                    completition(.success(.model(model)))
+                } catch {
+                    completition(.failure(error))
+                }
             }
-        }
-        task.resume()
-    }
-    
-    func requestPostData(id: Int, title: String, price: Int, completition: @escaping (Result<Int,Error>) -> Void) {
+            task.resume()
         
-        guard let url = URL(string: "https://dummyjson.com/products/add") else {return}
-        
-        var request = URLRequest(url: url)
-        
-        request.httpMethod = "POST"
-        
-        let product = [Product(id: 0, title: "", description: "", price: 0, discountPercentage: 0, rating: 0, stock: 0, brand: "", category: "", thumbnail: "", images: .init())]
-        
-        request.httpBody = try? JSONEncoder().encode(product)
-        
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            guard let response = response as? HTTPURLResponse else {return}
+        case .post(let id, let name, let price, let brand, let category):
+            guard let url = URL(string: "https://dummyjson.com/products/add") else {return}
             
-            do{
-                completition(.success((response.statusCode)))
-            } catch {
-                completition(.failure(error))
+            var request = URLRequest(url: url)
+            
+            request.httpMethod = "POST"
+            
+            let product = [Product(id: id, title: name, description: "", price: price, discountPercentage: 0, rating: 0, stock: 0, brand: brand, category: category, thumbnail: "", images: .init())]
+            
+            request.httpBody = try? JSONEncoder().encode(product)
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                guard let response = response as? HTTPURLResponse else {return}
+                
+                do{
+                    completition(.success(.statusCode(response.statusCode)))
+                } catch {
+                    completition(.failure(error))
+                }
             }
+            task.resume()
         }
-        task.resume()
     }
-    
 }

@@ -156,7 +156,7 @@ class PostRequestPage: UIViewController {
                     print(failure.localizedDescription)
                 }
             }
-        }else{
+        } else {
             showAllert(with: "Error", message: "Заполните все поля!")
         }
     }
